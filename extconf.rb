@@ -1,69 +1,55 @@
+# frozen_string_literal: false
+
 #                                          -*- ruby -*-
 # extconf.rb
 #
-# Modified at: <1999/8/19 06:38:55 by ttate> 
+# Modified at: <1999/8/19 06:38:55 by ttate>
 #
 
 require 'mkmf'
 require 'rbconfig'
 
-$CFLAGS = case RUBY_VERSION
-          when /^1\.9/; '-DRUBY19'
-          when /^2\./; '-DRUBY19'
-          when /^3\./; '-DRUBY19'
-          else; ''
-          end
-
-implementation = case CONFIG['host_os']
-                 when /linux/i; 'shadow'
-                 when /sunos|solaris/i; 'shadow'
-                 when /freebsd|mirbsd|netbsd|openbsd/i; 'pwd'
-                 when /darwin/i; 'pwd'
-                 else; nil
-                   "This library works on OS X, FreeBSD, MirBSD, NetBSD, OpenBSD, Solaris and Linux."
-                 end
+implementation =
+  case ::CONFIG['host_os']
+  when /linux/i then 'shadow'
+  when /sunos|solaris/i then 'shadow'
+  when /freebsd|mirbsd|netbsd|openbsd/i then 'pwd'
+  when /darwin/i then 'pwd'
+  else; 'This library works on OS X, FreeBSD, MirBSD, NetBSD, OpenBSD, Solaris and Linux.'
+  end
 
 ok = true
 
 case implementation
 when 'shadow'
-  #$LDFLAGS = "-lshadow"
-
-  if( ! (ok &= have_library("shadow","getspent")) )
-    $LDFLAGS = ""
-    ok = have_func("getspent")
+  unless ok &= have_library('shadow', 'getspent')
+    LDFLAGS = ''.freeze
+    ok = have_func('getspent')
   end
 
-  ok &= have_func("fgetspent")
-  ok &= have_func("setspent")
-  ok &= have_func("endspent")
-  ok &= have_func("lckpwdf")
-  ok &= have_func("ulckpwdf")
+  ok &= have_func('fgetspent')
+  ok &= have_func('setspent')
+  ok &= have_func('endspent')
+  ok &= have_func('lckpwdf')
+  ok &= have_func('ulckpwdf')
 
-  if ok
-    if !have_func("sgetspent")
-      $CFLAGS += ' -DSOLARIS'
-    end
-  end
+  CFLAGS += ' -DSOLARIS' if ok && !have_func('sgetspent')
 when 'pwd'
-  ok &= have_func("endpwent")
-  ok &= have_func("getpwent")
-  ok &= have_func("getpwnam")
-  ok &= have_func("getpwuid")
-  ok &= have_func("setpassent")
-  ok &= have_func("setpwent")
+  ok &= have_func('endpwent')
+  ok &= have_func('getpwent')
+  ok &= have_func('getpwnam')
+  ok &= have_func('getpwuid')
+  ok &= have_func('setpassent')
+  ok &= have_func('setpwent')
 
-  have_header("uuid/uuid.h")
-  have_header("uuid.h")
+  have_header('uuid/uuid.h')
+  have_header('uuid.h')
 else
   ok = false
 end
 
-have_header( "ruby/io.h")
+have_header('ruby/io.h')
 
-if ok
+raise 'You are missing some of the required functions from either shadow.h on Linux/Solaris, or pwd.h on FreeBSD/MirBSD/NetBSD/OpenBSD/OS X.' unless ok
 
-  create_makefile("shadow", implementation)
-else
-  raise "You are missing some of the required functions from either shadow.h on Linux/Solaris, or pwd.h on FreeBSD/MirBSD/NetBSD/OpenBSD/OS X."
-end
+create_makefile('shadow', implementation)
